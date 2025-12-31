@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>YouTube Video Capture</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="container">
+    <h1>Captured Videos</h1>
+
+    <div class="stats">
+      <span id="videoCount">0 videos</span>
+    </div>
+
+    <div class="actions">
+      <button id="exportBtn" class="btn">
+        <span class="btn-icon">↓</span>
+        Export
+      </button>
+      <button id="clearBtn" class="btn btn-secondary">
+        <span class="btn-icon">×</span>
+        Clear
+      </button>
+    </div>
+
+    <div id="videoList" class="video-list">
+      <div class="empty-state">
+        <p>No videos yet</p>
+        <small>Click Capture on any YouTube video</small>
+      </div>
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

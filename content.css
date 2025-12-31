@@ -1,0 +1,38 @@
+/* Capture button on YouTube page */
+.yt-capture-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background: #1a1a1a;
+  color: white;
+  border: none;
+  border-radius: 18px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  margin-right: 8px;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.yt-capture-button:hover {
+  background: #333;
+  transform: scale(1.02);
+}
+
+.yt-capture-button:active {
+  transform: scale(0.98);
+}
+
+.yt-capture-button.captured {
+  background: #1a1a1a;
+}
+
+.yt-capture-button.captured:hover {
+  background: #333;
+}
+
+.yt-capture-button svg {
+  flex-shrink: 0;
+}

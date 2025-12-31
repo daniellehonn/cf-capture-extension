@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <defs>
+    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#FF0000;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#CC0000;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+
+  <!-- Background circle -->
+  <circle cx="64" cy="64" r="60" fill="url(#grad)"/>
+
+  <!-- Camera body -->
+  <rect x="28" y="44" width="52" height="36" rx="4" fill="white"/>
+
+  <!-- Camera lens -->
+  <circle cx="54" cy="62" r="12" fill="#FF0000"/>
+  <circle cx="54" cy="62" r="8" fill="white"/>
+  <circle cx="54" cy="62" r="4" fill="#FF0000"/>
+
+  <!-- Camera top -->
+  <rect x="40" y="38" width="28" height="8" rx="2" fill="white"/>
+
+  <!-- Play button overlay -->
+  <polygon points="94,50 94,78 118,64" fill="white"/>
+  <circle cx="106" cy="64" r="18" fill="none" stroke="white" stroke-width="3"/>
+
+  <!-- Capture symbol -->
+  <circle cx="94" cy="50" r="6" fill="#FF0000"/>
+</svg>
