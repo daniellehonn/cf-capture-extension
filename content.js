@@ -36,7 +36,7 @@ function getVideoInfo() {
     }
   }
 
-  // Get creator from DOM
+  // Get creator and channel ID from DOM
   const creatorSelectors = [
     '#text.ytd-channel-name a',
     '#channel-name a.yt-simple-endpoint',
@@ -45,10 +45,25 @@ function getVideoInfo() {
     'ytd-watch-metadata ytd-video-owner-renderer yt-formatted-string a'
   ];
 
+  let channelId = '';
+
   for (const selector of creatorSelectors) {
     const element = document.querySelector(selector);
     if (element && element.textContent.trim()) {
       creator = element.textContent.trim();
+      // Extract channel ID from href
+      const href = element.getAttribute('href');
+      if (href) {
+        // Handle various YouTube channel URL formats:
+        // /channel/UCxxxxxxxxxxxxxxxxxx
+        // /c/customname
+        // /user/username
+        // /@handle
+        const channelMatch = href.match(/\/(channel\/[^\/\?]+|c\/[^\/\?]+|user\/[^\/\?]+|@[^\/\?]+)/);
+        if (channelMatch) {
+          channelId = channelMatch[1];
+        }
+      }
       break;
     }
   }
@@ -161,6 +176,7 @@ function getVideoInfo() {
     videoId,
     title,
     creator,
+    channelId,
     views,
     likes,
     comments
@@ -170,6 +186,7 @@ function getVideoInfo() {
     videoId: currentUrlVideoId || videoId, // Use the videoId from URL
     title,
     creator,
+    channelId,
     views,
     likes,
     comments,

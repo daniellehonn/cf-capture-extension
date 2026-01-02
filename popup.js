@@ -32,6 +32,12 @@ async function loadVideos() {
           <span class="meta-separator">•</span>
           <span class="video-date">${formattedDate}</span>
         </div>
+        ${video.channelId ? `
+        <div class="video-channel-id">
+          <span class="channel-id-label">Channel ID:</span>
+          <span class="channel-id-value">${escapeHtml(video.channelId)}</span>
+        </div>
+        ` : ''}
         <div class="video-stats">
           <span class="stat-item">
             <span class="meta-icon">👁</span>
@@ -99,10 +105,11 @@ async function exportToCSV() {
   }
 
   // Create CSV content
-  const headers = ['Title', 'Creator', 'Views', 'Likes', 'Comments', 'URL', 'Video ID', 'Captured At'];
+  const headers = ['Title', 'Creator', 'Channel ID', 'Views', 'Likes', 'Comments', 'URL', 'Video ID', 'Captured At'];
   const rows = videos.map(video => [
     `"${(video.title || '').replace(/"/g, '""')}"`,
     `"${(video.creator || '').replace(/"/g, '""')}"`,
+    `"${(video.channelId || '').replace(/"/g, '""')}"`,
     `"${video.views || '0'}"`,
     `"${video.likes || '0'}"`,
     `"${video.comments || '0'}"`,
