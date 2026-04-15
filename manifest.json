@@ -1,27 +1,22 @@
 {
   "manifest_version": 3,
-  "name": "YouTube Video Capture",
-  "version": "1.0.0",
-  "description": "Capture YouTube videos with one click and export them to a spreadsheet",
+  "name": "Contextforce Capture",
+  "version": "2.0.0",
+  "description": "Capture any page URL with one click and export to CSV or JSON",
   "permissions": [
     "storage",
-    "activeTab"
+    "activeTab",
+    "sidePanel",
+    "scripting"
   ],
   "host_permissions": [
-    "https://www.youtube.com/*"
+    "<all_urls>"
   ],
-  "action": {
-    "default_popup": "popup.html"
+  "side_panel": {
+    "default_path": "sidepanel.html"
   },
   "background": {
     "service_worker": "background.js"
   },
-  "content_scripts": [
-    {
-      "matches": ["https://www.youtube.com/*"],
-      "js": ["content.js"],
-      "css": ["content.css"],
-      "run_at": "document_end"
-    }
-  ]
+  "action": {}
 }

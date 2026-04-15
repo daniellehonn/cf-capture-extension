@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Contextforce Capture</title>
+  <link rel="stylesheet" href="sidepanel.css">
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Captured Pages</h1>
+      <span id="itemCount" class="count">0 items</span>
+    </div>
+
+    <button id="captureBtn" class="btn btn-capture">
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+        <circle cx="12" cy="12" r="10"></circle>
+        <line x1="12" y1="8" x2="12" y2="16"></line>
+        <line x1="8" y1="12" x2="16" y2="12"></line>
+      </svg>
+      Capture Current Page
+    </button>
+
+    <div class="actions">
+      <button id="exportCsvBtn" class="btn btn-secondary">CSV</button>
+      <button id="exportJsonBtn" class="btn btn-secondary">JSON</button>
+      <button id="clearBtn" class="btn btn-danger">Clear</button>
+    </div>
+
+    <div id="itemList" class="item-list">
+      <div class="empty-state">
+        <p>No pages captured yet</p>
+        <small>Click "Capture Current Page" to start</small>
+      </div>
+    </div>
+  </div>
+
+  <script src="sidepanel.js"></script>
+</body>
+</html>

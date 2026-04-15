@@ -1,47 +1,35 @@
-// Handle messages from content script and popup
+// Open side panel when extension icon is clicked
+chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true });
+
+// Handle messages from sidepanel
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  if (request.action === 'captureVideo') {
-    handleVideoCapture(request.video).then(sendResponse);
-    return true; // Keep message channel open for async response
+  if (request.action === 'captureItem') {
+    handleItemCapture(request.item).then(sendResponse);
+    return true;
   }
 });
 
-// Handle video capture
-async function handleVideoCapture(videoInfo) {
+// Save a captured item
+async function handleItemCapture(item) {
   try {
-    console.log('[Capture-Extension] Background: Received video info:', videoInfo);
+    const result = await chrome.storage.local.get(['capturedItems']);
+    const items = result.capturedItems || [];
 
-    // Get existing videos
-    const result = await chrome.storage.local.get(['capturedVideos']);
-    const videos = result.capturedVideos || [];
-
-    console.log('[Capture-Extension] Background: Existing videos count:', videos.length);
-    console.log('[Capture-Extension] Background: Existing video IDs:', videos.map(v => v.videoId));
-
-    // Check if video already exists
-    const existingIndex = videos.findIndex(v => v.videoId === videoInfo.videoId);
+    // Check for duplicate URL — update if exists
+    const existingIndex = items.findIndex(i => i.url === item.url);
 
     if (existingIndex !== -1) {
-      console.log('[Capture-Extension] Background: Updating existing video at index:', existingIndex);
-      // Update existing video
-      videos[existingIndex] = videoInfo;
+      items[existingIndex] = item;
     } else {
-      console.log('[Capture-Extension] Background: Adding new video');
-      // Add new video
-      videos.unshift(videoInfo); // Add to beginning of array
+      items.unshift(item);
     }
 
-    console.log('[Capture-Extension] Background: Saving videos:', videos.map(v => ({ id: v.videoId, title: v.title })));
-
-    // Save to storage
-    await chrome.storage.local.set({ capturedVideos: videos });
-
-    // Set badge text
-    await updateBadge(videos.length);
+    await chrome.storage.local.set({ capturedItems: items });
+    await updateBadge(items.length);
 
     return { success: true };
   } catch (error) {
-    console.error('[Capture-Extension] Error saving video:', error);
+    console.error('Error saving item:', error);
     return { success: false, error: error.message };
   }
 }
@@ -50,23 +38,23 @@ async function handleVideoCapture(videoInfo) {
 async function updateBadge(count) {
   if (count > 0) {
     await chrome.action.setBadgeText({ text: count.toString() });
-    await chrome.action.setBadgeBackgroundColor({ color: '#FF0000' });
+    await chrome.action.setBadgeBackgroundColor({ color: '#1a73e8' });
   } else {
     await chrome.action.setBadgeText({ text: '' });
   }
 }
 
-// Initialize badge on extension install/start
+// Initialize badge on install/start
 chrome.runtime.onInstalled.addListener(async () => {
-  const result = await chrome.storage.local.get(['capturedVideos']);
-  const videos = result.capturedVideos || [];
-  await updateBadge(videos.length);
+  const result = await chrome.storage.local.get(['capturedItems']);
+  const items = result.capturedItems || [];
+  await updateBadge(items.length);
 });
 
 // Update badge when storage changes
 chrome.storage.onChanged.addListener(async (changes, namespace) => {
-  if (namespace === 'local' && changes.capturedVideos) {
-    const newCount = changes.capturedVideos.newValue?.length || 0;
+  if (namespace === 'local' && changes.capturedItems) {
+    const newCount = changes.capturedItems.newValue?.length || 0;
     await updateBadge(newCount);
   }
 });
