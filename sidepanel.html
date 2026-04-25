@@ -4,38 +4,104 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Contextforce Capture</title>
+  <link rel="stylesheet" href="vendor/leaflet.css">
   <link rel="stylesheet" href="sidepanel.css">
 </head>
 <body>
   <div class="container">
-    <div class="header">
-      <h1>Captured Pages</h1>
-      <span id="itemCount" class="count">0 items</span>
+    <!-- Tab bar -->
+    <div class="tab-bar">
+      <button class="tab active" data-tab="capture">Capture</button>
+      <button class="tab" data-tab="results">Results</button>
+      <button class="tab" data-tab="drawer" id="drawerTab">Drawer <span id="drawerBadge" class="tab-badge"></span></button>
+      <div class="spacer"></div>
+      <button id="settingsToggle" class="btn-icon-only" title="Settings">
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <circle cx="12" cy="12" r="3"></circle>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+        </svg>
+      </button>
     </div>
 
-    <button id="captureBtn" class="btn btn-capture">
-      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
-        <circle cx="12" cy="12" r="10"></circle>
-        <line x1="12" y1="8" x2="12" y2="16"></line>
-        <line x1="8" y1="12" x2="16" y2="12"></line>
-      </svg>
-      Capture Current Page
-    </button>
-
-    <div class="actions">
-      <button id="exportCsvBtn" class="btn btn-secondary">CSV</button>
-      <button id="exportJsonBtn" class="btn btn-secondary">JSON</button>
-      <button id="clearBtn" class="btn btn-danger">Clear</button>
+    <!-- Settings (collapsible) -->
+    <div id="settingsPanel" class="settings-panel hidden">
+      <label class="settings-label">Agent Hub URL</label>
+      <div class="settings-row" style="margin-bottom:8px">
+        <input id="agentHubInput" type="url" placeholder="http://localhost:51957" class="settings-input">
+      </div>
+      <label class="settings-label">MCP Hub URL</label>
+      <div class="settings-row" style="margin-bottom:8px">
+        <input id="mcpHubInput" type="url" placeholder="http://localhost:8787" class="settings-input">
+      </div>
+      <div class="settings-row" style="margin-bottom:8px">
+        <label class="settings-toggle-label">
+          <input type="checkbox" id="useCacheToggle" checked>
+          <span>Use cache</span>
+        </label>
+      </div>
+      <div class="settings-row">
+        <button id="saveSettingsBtn" class="btn btn-save">Save</button>
+      </div>
     </div>
 
-    <div id="itemList" class="item-list">
-      <div class="empty-state">
-        <p>No pages captured yet</p>
-        <small>Click "Capture Current Page" to start</small>
+    <!-- ═══ CAPTURE TAB ═══ -->
+    <div id="tab-capture" class="tab-panel">
+      <button id="captureBtn" class="btn btn-capture">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="12" y1="8" x2="12" y2="16"></line>
+          <line x1="8" y1="12" x2="16" y2="12"></line>
+        </svg>
+        Capture Current Page
+      </button>
+
+      <div class="actions">
+        <span id="itemCount" class="count">0</span>
+        <button id="exportCsvBtn" class="btn btn-secondary">CSV</button>
+        <button id="exportJsonBtn" class="btn btn-secondary">JSON</button>
+        <button id="clearBtn" class="btn btn-danger">Clear</button>
+      </div>
+
+      <div id="itemList" class="item-list">
+        <div class="empty-state">
+          <p>No pages captured yet</p>
+          <small>Click "Capture Current Page" to start</small>
+        </div>
+      </div>
+
+      <button id="extractBtn" class="btn btn-extract hidden">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+          <path d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.66 0 3-4.03 3-9s-1.34-9-3-9m0 18c-1.66 0-3-4.03-3-9s1.34-9 3-9m-9 9a9 9 0 019-9"></path>
+        </svg>
+        <span id="extractLabel">Extract</span>
+      </button>
+    </div>
+
+    <!-- ═══ RESULTS TAB ═══ -->
+    <div id="tab-results" class="tab-panel hidden">
+      <div id="globalViewToggle" class="view-toggle" style="display:none;">
+        <button class="view-toggle-btn" id="globalViewBtn" data-view="experiences">POIs</button>
+      </div>
+      <div id="resultsContent" class="results-content">
+        <div class="empty-state">
+          <p>No extractions yet</p>
+          <small>Capture URLs then click "Extract"</small>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ DRAWER TAB ═══ -->
+    <div id="tab-drawer" class="tab-panel hidden">
+      <div id="drawerContent" class="results-content">
+        <div class="empty-state">
+          <p>No saved experiences</p>
+          <small>Save micro-experiences from extraction results to build a trip</small>
+        </div>
       </div>
     </div>
   </div>
 
+  <script src="vendor/leaflet.js"></script>
   <script src="sidepanel.js"></script>
 </body>
 </html>
