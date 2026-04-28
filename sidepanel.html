@@ -15,6 +15,7 @@
       <button class="tab" data-tab="results">Results</button>
       <button class="tab" data-tab="drawer" id="drawerTab">Drawer <span id="drawerBadge" class="tab-badge"></span></button>
       <div class="spacer"></div>
+      <button id="authButton" class="auth-btn" title="Log in">Log in</button>
       <button id="settingsToggle" class="btn-icon-only" title="Settings">
         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
           <circle cx="12" cy="12" r="3"></circle>
@@ -32,6 +33,10 @@
       <label class="settings-label">MCP Hub URL</label>
       <div class="settings-row" style="margin-bottom:8px">
         <input id="mcpHubInput" type="url" placeholder="http://localhost:8787" class="settings-input">
+      </div>
+      <label class="settings-label">Web App URL</label>
+      <div class="settings-row" style="margin-bottom:8px">
+        <input id="webAppInput" type="url" placeholder="https://fortypirates.com" class="settings-input">
       </div>
       <div class="settings-row" style="margin-bottom:8px">
         <label class="settings-toggle-label">
@@ -99,6 +104,14 @@
         </div>
       </div>
     </div>
+  </div>
+
+  <div id="authDropdown" class="auth-dropdown">
+    <div class="auth-dropdown-user">
+      <div class="auth-dropdown-name" id="authDropdownName"></div>
+      <div class="auth-dropdown-email" id="authDropdownEmail"></div>
+    </div>
+    <button class="auth-dropdown-item danger" id="authLogoutBtn">Log out</button>
   </div>
 
   <script src="vendor/leaflet.js"></script>

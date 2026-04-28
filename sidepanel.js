@@ -233,14 +233,16 @@ async function loadSettings() {
   const s = settings || {};
   document.getElementById('agentHubInput').value = s.agentHubUrl || 'http://localhost:51957';
   document.getElementById('mcpHubInput').value = s.mcpHubUrl || 'http://localhost:8787';
+  document.getElementById('webAppInput').value = s.webAppUrl || 'http://localhost:3000';
   document.getElementById('useCacheToggle').checked = s.useCache !== false;
 }
 
 async function saveSettings() {
   const agentHubUrl = document.getElementById('agentHubInput').value.trim().replace(/\/$/, '');
   const mcpHubUrl = document.getElementById('mcpHubInput').value.trim().replace(/\/$/, '');
+  const webAppUrl = document.getElementById('webAppInput').value.trim().replace(/\/$/, '');
   const useCache = document.getElementById('useCacheToggle').checked;
-  await chrome.storage.local.set({ settings: { agentHubUrl, mcpHubUrl, useCache } });
+  await chrome.storage.local.set({ settings: { agentHubUrl, mcpHubUrl, webAppUrl, useCache } });
   const btn = document.getElementById('saveSettingsBtn');
   btn.textContent = 'Saved'; setTimeout(() => { btn.textContent = 'Save'; }, 1000);
 }
@@ -2104,6 +2106,89 @@ async function buildTrip(items) {
 }
 
 // ═══════════════════════════════════════════════════
+// AUTH — optional login via Better Auth
+// ═══════════════════════════════════════════════════
+
+async function getWebAppUrl() {
+  const { settings } = await chrome.storage.local.get('settings');
+  return (settings || {}).webAppUrl || 'https://fortypirates.com';
+}
+
+async function checkAuth() {
+  const webAppUrl = await getWebAppUrl();
+  try {
+    const res = await fetch(`${webAppUrl}/api/auth/get-session`, {
+      credentials: 'include',
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!res.ok) { renderAuthState(null); return null; }
+    const data = await res.json();
+    const session = data?.user ? data : null;
+    await chrome.storage.local.set({ authSession: session });
+    renderAuthState(session);
+    return session;
+  } catch {
+    // Network error — try loading from storage
+    const { authSession } = await chrome.storage.local.get('authSession');
+    renderAuthState(authSession || null);
+    return authSession || null;
+  }
+}
+
+function renderAuthState(session) {
+  const btn = document.getElementById('authButton');
+  if (!btn) return;
+
+  if (session?.user) {
+    const user = session.user;
+    btn.className = 'auth-btn logged-in';
+    btn.title = user.name || user.email;
+    if (user.image) {
+      btn.innerHTML = `<img class="auth-avatar" src="${escapeHtml(user.image)}" alt="">`;
+    } else {
+      const initials = (user.name || user.email || '?').slice(0, 2).toUpperCase();
+      btn.innerHTML = `<div class="auth-initials">${initials}</div>`;
+    }
+  } else {
+    btn.className = 'auth-btn';
+    btn.title = 'Log in';
+    btn.innerHTML = 'Log in';
+  }
+}
+
+function openLogin() {
+  getWebAppUrl().then(webAppUrl => {
+    chrome.tabs.create({ url: `${webAppUrl}/login` });
+  });
+}
+
+async function logout() {
+  const webAppUrl = await getWebAppUrl();
+  try {
+    await fetch(`${webAppUrl}/api/auth/sign-out`, {
+      method: 'POST',
+      credentials: 'include',
+    });
+  } catch {}
+  await chrome.storage.local.remove('authSession');
+  renderAuthState(null);
+  document.getElementById('authDropdown').classList.remove('open');
+}
+
+// Listen for cookie changes — detect login immediately
+if (typeof chrome !== 'undefined' && chrome.cookies) {
+  chrome.cookies.onChanged.addListener(async (changeInfo) => {
+    if (changeInfo.cookie.name.includes('session') && !changeInfo.removed) {
+      const webAppUrl = await getWebAppUrl();
+      const domain = new URL(webAppUrl).hostname;
+      if (changeInfo.cookie.domain.includes(domain) || changeInfo.cookie.domain === 'localhost') {
+        checkAuth();
+      }
+    }
+  });
+}
+
+// ═══════════════════════════════════════════════════
 // INIT
 // ═══════════════════════════════════════════════════
 
@@ -2111,10 +2196,36 @@ document.addEventListener('DOMContentLoaded', () => {
   loadItems();
   loadSettings();
   updateDrawerBadge();
+  checkAuth();
 
   // Tab switching
   document.querySelectorAll('.tab').forEach(t => {
     t.addEventListener('click', () => switchTab(t.dataset.tab));
+  });
+
+  // Auth
+  const authBtn = document.getElementById('authButton');
+  const authDropdown = document.getElementById('authDropdown');
+  authBtn.addEventListener('click', (e) => {
+    const { authSession } = chrome.storage.local.get('authSession');
+    chrome.storage.local.get('authSession', ({ authSession: session }) => {
+      if (session?.user) {
+        // Toggle dropdown
+        authDropdown.classList.toggle('open');
+        document.getElementById('authDropdownName').textContent = session.user.name || '';
+        document.getElementById('authDropdownEmail').textContent = session.user.email || '';
+      } else {
+        openLogin();
+      }
+    });
+  });
+  document.getElementById('authLogoutBtn').addEventListener('click', logout);
+
+  // Close dropdown on outside click
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('#authButton') && !e.target.closest('#authDropdown')) {
+      authDropdown.classList.remove('open');
+    }
   });
 
   // Capture tab
