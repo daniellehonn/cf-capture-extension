@@ -233,16 +233,14 @@ async function loadSettings() {
   const s = settings || {};
   document.getElementById('agentHubInput').value = s.agentHubUrl || 'http://localhost:51957';
   document.getElementById('mcpHubInput').value = s.mcpHubUrl || 'http://localhost:8787';
-  document.getElementById('webAppInput').value = s.webAppUrl || 'http://localhost:3000';
   document.getElementById('useCacheToggle').checked = s.useCache !== false;
 }
 
 async function saveSettings() {
   const agentHubUrl = document.getElementById('agentHubInput').value.trim().replace(/\/$/, '');
   const mcpHubUrl = document.getElementById('mcpHubInput').value.trim().replace(/\/$/, '');
-  const webAppUrl = document.getElementById('webAppInput').value.trim().replace(/\/$/, '');
   const useCache = document.getElementById('useCacheToggle').checked;
-  await chrome.storage.local.set({ settings: { agentHubUrl, mcpHubUrl, webAppUrl, useCache } });
+  await chrome.storage.local.set({ settings: { agentHubUrl, mcpHubUrl, useCache } });
   const btn = document.getElementById('saveSettingsBtn');
   btn.textContent = 'Saved'; setTimeout(() => { btn.textContent = 'Save'; }, 1000);
 }
@@ -339,7 +337,7 @@ function detectSop(url) {
     }
   } catch {}
   // Generic URL / entity
-  return { type: 'generic', sopId: 'entity-poi-extraction', mode: 'fast', fallbackSopId: null };
+  return { type: 'generic', sopId: 'article-shape-dispatcher', mode: 'instant', fallbackSopId: null };
 }
 
 async function startExtraction() {
@@ -364,23 +362,24 @@ async function startExtraction() {
 
   // Reset global view toggle
   const globalToggle = document.getElementById('globalViewToggle');
-  const globalBtn = document.getElementById('globalViewBtn');
+  const viewExpBtn = document.getElementById('viewExpBtn');
+  const viewPoiBtn = document.getElementById('viewPoiBtn');
   globalToggle.style.display = 'none';
-  globalBtn.dataset.view = 'experiences';
-  globalBtn.textContent = 'POIs';
+  viewExpBtn.classList.add('active');
+  viewPoiBtn.classList.remove('active');
 
-  // Wire global view toggle (only once)
-  if (!globalBtn._wired) {
-    globalBtn._wired = true;
-    globalBtn.addEventListener('click', () => {
-      const isPois = globalBtn.dataset.view === 'pois';
-      globalBtn.dataset.view = isPois ? 'experiences' : 'pois';
-      globalBtn.textContent = isPois ? 'POIs' : 'Experiences';
-      // Re-render all sections
+  // Wire segmented toggle (only once)
+  if (!globalToggle._wired) {
+    globalToggle._wired = true;
+    const setView = (view) => {
+      viewExpBtn.classList.toggle('active', view === 'experiences');
+      viewPoiBtn.classList.toggle('active', view === 'pois');
       for (const idx of Object.keys(sectionData)) {
-        renderSectionView(idx, globalBtn.dataset.view);
+        renderSectionView(idx, view);
       }
-    });
+    };
+    viewExpBtn.addEventListener('click', () => setView('experiences'));
+    viewPoiBtn.addEventListener('click', () => setView('pois'));
   }
 
   // Build sections
@@ -455,8 +454,8 @@ async function extractUrl(agentHubUrl, mcpHubUrl, item, index) {
     // Fetch from agent-hub
     const res = await fetchAgentHub(agentHubUrl, sopInfo.sopId, inputs, sopInfo.mode, videoMeta);
 
-    // content-shape-dispatcher → NDJSON streaming pipeline
-    if (sopInfo.sopId === 'content-shape-dispatcher' && res.body) {
+    // shape-dispatcher SOPs → NDJSON streaming pipeline
+    if (sopInfo.sopId.endsWith('-shape-dispatcher') && res.body) {
       await processShapeDispatcher(res, mcpHubUrl, index, cacheKey, videoMeta, item);
       return;
     }
@@ -877,6 +876,8 @@ async function processShapeDispatcher(res, mcpHubUrl, index, cacheKey, videoMeta
   let primaryLocation = null;
   let primaryLat = null, primaryLng = null;
   const seenNames = new Map(); // normalized name → pois[] index
+  let skeletonCleared = false;
+  let streamCount = 0;
 
   const limiter = createLimiter(5);
   const geocodePromises = [];
@@ -943,8 +944,6 @@ async function processShapeDispatcher(res, mcpHubUrl, index, cacheKey, videoMeta
             };
             result.microExperiences.push(me);
             currentMeId = event.id;
-            // Render ME header immediately
-            appendMeHeader(poisEl, me, result.microExperiences.length - 1);
             break;
 
           case 'listicle-meta':
@@ -953,7 +952,8 @@ async function processShapeDispatcher(res, mcpHubUrl, index, cacheKey, videoMeta
 
           case 'stop':
           case 'item':
-          case 'poi': {
+          case 'poi':
+          case 'poi-ref': {
             if (!event.name) break;
 
             // Upsert POI (deduplicate by normalized name)
@@ -977,10 +977,51 @@ async function processShapeDispatcher(res, mcpHubUrl, index, cacheKey, videoMeta
               result.pois.push(poi);
               seenNames.set(norm, poiIdx);
 
-              // Fire geocode (rate-limited) — no rendering during streaming
-              statusEl.innerHTML = `<div class="spinner"></div> <span>Geocoding ${result.pois.length} POIs…</span>`;
+              // Stream POI card to UI immediately
+              streamCount++;
+              if (!skeletonCleared) {
+                poisEl.innerHTML = '';
+                skeletonCleared = true;
+              }
+              statusEl.innerHTML = `<div class="spinner"></div> <span>Extracted ${streamCount} places…</span>`;
+
+              const streamCard = document.createElement('div');
+              streamCard.className = 'poi-stream-card';
+              streamCard.innerHTML = `
+                <div class="poi-stream-num">${poiIdx + 1}</div>
+                <div class="poi-stream-body">
+                  <div class="poi-stream-name">${escapeHtml(event.name)}</div>
+                  <div class="poi-stream-status"><div class="spinner-sm"></div> Searching…</div>
+                </div>`;
+              poisEl.appendChild(streamCard);
+
+              // Fire geocode (rate-limited), update card on completion
               geocodePromises.push(
-                limiter(() => geocodePoi(poi, mcpHubUrl, primaryLat, primaryLng))
+                limiter(() => geocodePoi(poi, mcpHubUrl, primaryLat, primaryLng)).then(() => {
+                  if (poi.status === 'success') {
+                    const imgHtml = poi.imageUrl
+                      ? `<div class="poi-stream-thumb"><img src="${escapeHtml(poi.imageUrl)}" alt="" loading="lazy"></div>`
+                      : '';
+                    streamCard.innerHTML = `
+                      ${imgHtml}
+                      <div class="poi-stream-num">${poiIdx + 1}</div>
+                      <div class="poi-stream-body">
+                        <div class="poi-stream-name">${escapeHtml(poi.name)}</div>
+                        ${poi.address ? `<div class="poi-stream-addr">${escapeHtml(poi.address)}</div>` : ''}
+                        ${poi.rating ? `<div class="poi-stream-rating">★ ${poi.rating}</div>` : ''}
+                      </div>`;
+                    if (poi.coordinates) {
+                      updateMapWithPoi(index, poi.name, poi.coordinates.lat, poi.coordinates.lng);
+                    }
+                  } else {
+                    streamCard.innerHTML = `
+                      <div class="poi-stream-num">${poiIdx + 1}</div>
+                      <div class="poi-stream-body">
+                        <div class="poi-stream-name">${escapeHtml(poi.query)}</div>
+                        <div class="poi-stream-addr not-found">Not found</div>
+                      </div>`;
+                  }
+                })
               );
             }
 
@@ -1069,7 +1110,7 @@ async function processShapeDispatcher(res, mcpHubUrl, index, cacheKey, videoMeta
 
   // Store for view toggling
   const videoCtx = {
-    videoTitle: result.videoTitle || result._videoMeta?.title || (item ? item.title : ''),
+    videoTitle: result.videoTitle || result.articleTitle || result._videoMeta?.title || (item ? item.title : ''),
     videoUrl: item ? item.url : '',
     videoThumb: item ? item.thumbnail : (result._videoMeta?.thumbnailUrl || null),
   };
@@ -1096,8 +1137,32 @@ async function processShapeDispatcher(res, mcpHubUrl, index, cacheKey, videoMeta
     }
   }
 
+  // Cache full shape data (before any early returns)
+  if (cacheKey) {
+    await setCacheEntry(cacheKey, {
+      shape: result.shape || 'extraction',
+      videoTitle: result.videoTitle || null,
+      articleTitle: result.articleTitle || null,
+      videoSummary: result.videoSummary || null,
+      primaryLocation: result.primaryLocation || null,
+      primaryLocationCoords: result.primaryLocationCoords || null,
+      pois: deduped.map(p => ({
+        name: p.name, placeId: p.placeId, coordinates: p.coordinates,
+        imageUrl: p.imageUrl, address: p.address, rating: p.rating,
+        reviewCount: p.reviewCount, category: p.category, neighborhood: p.neighborhood,
+        highlight: p.highlight, mentions: p.mentions,
+      })),
+      sources: result.sources,
+      tips: result.tips,
+      microExperiences: result.microExperiences.map(({ id, ...me }) => me),
+      items: result.items,
+      _videoMeta: result._videoMeta,
+      _instant: true,
+    });
+  }
+
   // Respect current global view mode
-  const globalView = document.getElementById('globalViewBtn')?.dataset.view || 'experiences';
+  const globalView = document.getElementById('viewPoiBtn')?.classList.contains('active') ? 'pois' : 'experiences';
   if (globalView === 'pois') {
     renderSectionView(index, 'pois');
     if (mapPois.length > 0) initMap(index, mapPois);
@@ -1128,29 +1193,6 @@ async function processShapeDispatcher(res, mcpHubUrl, index, cacheKey, videoMeta
   }
 
   if (mapPois.length > 0) initMap(index, mapPois);
-
-  // Cache full shape data
-  if (cacheKey) {
-    setCacheEntry(cacheKey, {
-      shape: result.shape || 'extraction',
-      videoTitle: result.videoTitle || null,
-      videoSummary: result.videoSummary || null,
-      primaryLocation: result.primaryLocation || null,
-      primaryLocationCoords: result.primaryLocationCoords || null,
-      pois: deduped.map(p => ({
-        name: p.name, placeId: p.placeId, coordinates: p.coordinates,
-        imageUrl: p.imageUrl, address: p.address, rating: p.rating,
-        reviewCount: p.reviewCount, category: p.category, neighborhood: p.neighborhood,
-        highlight: p.highlight, mentions: p.mentions,
-      })),
-      sources: result.sources,
-      tips: result.tips,
-      microExperiences: result.microExperiences.map(({ id, ...me }) => me),
-      items: result.items,
-      _videoMeta: result._videoMeta,
-      _instant: true,
-    });
-  }
 
   const meCount = result.microExperiences.length;
   const label = meCount > 0
@@ -1668,7 +1710,7 @@ async function renderShapeFromCache(poisEl, cached, deduped, index) {
   const mapPois = [];
 
   const videoCtx = {
-    videoTitle: cached.videoTitle || cached._videoMeta?.title || '',
+    videoTitle: cached.videoTitle || cached.articleTitle || cached._videoMeta?.title || '',
     videoUrl: cached._sourceUrl || '',
     videoThumb: cached._videoMeta?.thumbnailUrl || null,
   };
@@ -2020,7 +2062,14 @@ async function loadDrawer() {
 
   // Wire create trip
   const tripBtn = document.getElementById('createTripBtn');
-  if (tripBtn) tripBtn.addEventListener('click', () => buildTrip(drawer.items));
+  if (tripBtn) tripBtn.addEventListener('click', async () => {
+    const { authSession } = await chrome.storage.local.get('authSession');
+    if (!authSession?.user) {
+      openLogin();
+      return;
+    }
+    buildTrip(drawer.items);
+  });
 }
 
 // ── Trip builder ──
@@ -2110,8 +2159,7 @@ async function buildTrip(items) {
 // ═══════════════════════════════════════════════════
 
 async function getWebAppUrl() {
-  const { settings } = await chrome.storage.local.get('settings');
-  return (settings || {}).webAppUrl || 'https://fortypirates.com';
+  return 'https://fortypirates.com';
 }
 
 async function checkAuth() {
@@ -2206,8 +2254,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Auth
   const authBtn = document.getElementById('authButton');
   const authDropdown = document.getElementById('authDropdown');
-  authBtn.addEventListener('click', (e) => {
-    const { authSession } = chrome.storage.local.get('authSession');
+  authBtn.addEventListener('click', () => {
     chrome.storage.local.get('authSession', ({ authSession: session }) => {
       if (session?.user) {
         // Toggle dropdown

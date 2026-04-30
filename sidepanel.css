@@ -425,22 +425,36 @@ body::before {
 
 /* ─── view toggle ─── */
 .view-toggle {
-  display: flex; justify-content: flex-end; margin-bottom: 8px;
+  display: flex; justify-content: center; margin-bottom: 10px;
 }
 .view-toggle-btn {
-  font-family: var(--sans); font-size: 10px; font-weight: 600;
-  color: var(--ink-muted); background: var(--bg-warm);
-  border: 1px solid var(--line-soft); border-radius: 6px;
-  padding: 4px 10px; cursor: pointer; transition: all 0.15s;
+  font-family: var(--sans); font-size: 11px; font-weight: 600;
+  color: var(--ink-muted); background: transparent;
+  border: 1px solid var(--line-soft);
+  padding: 5px 16px; cursor: pointer; transition: all 0.15s;
 }
-.view-toggle-btn:hover { border-color: var(--line); color: var(--ink); }
+.view-toggle-btn:first-child {
+  border-radius: 6px 0 0 6px;
+  border-right: none;
+}
+.view-toggle-btn:last-child {
+  border-radius: 0 6px 6px 0;
+}
+.view-toggle-btn.active {
+  background: var(--rust);
+  border-color: var(--rust);
+  color: #fff;
+}
+.view-toggle-btn:hover:not(.active) {
+  border-color: var(--line); color: var(--ink);
+}
 
 /* ─── POI list cards (flat view) ─── */
 .poi-list-card {
-  display: flex; gap: 10px; align-items: center;
-  padding: 8px; margin-bottom: 6px;
+  display: flex; gap: 8px; align-items: center;
+  padding: 6px 8px; margin-bottom: 4px;
   background: var(--paper-2); border: 1px solid var(--line-soft);
-  border-radius: 10px; cursor: pointer;
+  border-radius: 8px; cursor: pointer;
   transition: all 0.2s ease; animation: fadeUp 0.2s ease-out;
 }
 .poi-list-card:hover {
@@ -449,28 +463,37 @@ body::before {
 }
 
 .poi-list-img {
-  width: 64px; height: 64px; border-radius: 8px;
+  width: 48px; height: 48px; border-radius: 6px;
   background-size: cover; background-position: center;
   flex-shrink: 0;
   box-shadow: 0 2px 6px rgba(0,0,0,0.08);
 }
 
 .poi-list-num {
-  width: 36px; height: 36px; border-radius: 50%;
+  width: 28px; height: 28px; border-radius: 50%;
   background: var(--bg-warm); border: 1px solid var(--line);
   display: flex; align-items: center; justify-content: center;
-  font-family: var(--serif); font-size: 14px; font-weight: 600;
+  font-family: var(--sans); font-size: 10px; font-weight: 700;
   color: var(--ink-muted); flex-shrink: 0;
 }
 
 .poi-list-body { flex: 1; min-width: 0; }
 
 .poi-list-name {
-  font-family: var(--serif); font-size: 13px; font-weight: 600;
+  font-family: var(--sans); font-size: 11px; font-weight: 600;
   letter-spacing: -0.01em; line-height: 1.25; color: var(--ink);
-  margin-bottom: 2px;
+  margin-bottom: 1px;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
+
+.poi-list-card .meta {
+  font-family: var(--sans); font-size: 10px;
+  color: var(--ink-muted); line-height: 1.3;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.poi-list-card .meta .pin { color: var(--rust); }
+.poi-list-card .meta .rating { color: var(--ink-soft); font-weight: 600; }
+.poi-list-card .meta .sep { color: var(--line); margin: 0 2px; }
 
 /* ─── POI save button ─── */
 .poi-save-btn {
@@ -886,7 +909,68 @@ body::before {
   animation: spin 0.6s linear infinite; flex-shrink: 0;
 }
 
+.spinner-sm {
+  width: 12px; height: 12px; border: 2px solid var(--line);
+  border-top-color: var(--rust); border-radius: 50%;
+  animation: spin 0.6s linear infinite; flex-shrink: 0;
+}
+
 @keyframes spin { to { transform: rotate(360deg); } }
+
+/* ─── streaming POI cards ─── */
+.poi-stream-card {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--line-soft);
+  animation: streamFadeIn 0.25s ease;
+}
+.poi-stream-card:last-child { border-bottom: none; }
+
+.poi-stream-num {
+  width: 20px; height: 20px; border-radius: 50%;
+  background: var(--rust); color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 9px; font-weight: 700; font-family: var(--sans);
+  flex-shrink: 0;
+}
+
+.poi-stream-thumb {
+  width: 32px; height: 32px; border-radius: 6px;
+  overflow: hidden; flex-shrink: 0;
+}
+.poi-stream-thumb img {
+  width: 100%; height: 100%; object-fit: cover;
+}
+
+.poi-stream-body { flex: 1; min-width: 0; }
+
+.poi-stream-name {
+  font-weight: 500; font-size: 11px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  font-family: var(--sans);
+}
+
+.poi-stream-addr {
+  font-size: 10px; color: var(--ink-muted);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  font-family: var(--sans);
+}
+.poi-stream-addr.not-found { color: var(--gold); }
+
+.poi-stream-rating {
+  font-size: 10px; color: var(--gold); font-family: var(--sans);
+}
+
+.poi-stream-status {
+  font-size: 10px; color: var(--ink-muted);
+  display: flex; align-items: center; gap: 4px;
+  font-family: var(--sans);
+}
+
+@keyframes streamFadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
 
 /* ─── tip card ─── */
 .tip-card {

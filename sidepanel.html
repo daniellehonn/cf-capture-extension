@@ -34,10 +34,6 @@
       <div class="settings-row" style="margin-bottom:8px">
         <input id="mcpHubInput" type="url" placeholder="http://localhost:8787" class="settings-input">
       </div>
-      <label class="settings-label">Web App URL</label>
-      <div class="settings-row" style="margin-bottom:8px">
-        <input id="webAppInput" type="url" placeholder="https://fortypirates.com" class="settings-input">
-      </div>
       <div class="settings-row" style="margin-bottom:8px">
         <label class="settings-toggle-label">
           <input type="checkbox" id="useCacheToggle" checked>
@@ -85,7 +81,8 @@
     <!-- ═══ RESULTS TAB ═══ -->
     <div id="tab-results" class="tab-panel hidden">
       <div id="globalViewToggle" class="view-toggle" style="display:none;">
-        <button class="view-toggle-btn" id="globalViewBtn" data-view="experiences">POIs</button>
+        <button class="view-toggle-btn active" id="viewExpBtn" data-view="experiences">Experiences</button>
+        <button class="view-toggle-btn" id="viewPoiBtn" data-view="pois">POIs</button>
       </div>
       <div id="resultsContent" class="results-content">
         <div class="empty-state">
